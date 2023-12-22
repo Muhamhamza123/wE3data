@@ -1,0 +1,1195 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useParams } from 'react-router-dom';
+import '../styles/Loading.css';
+import '../styles/home.css';
+import { FiEdit } from "react-icons/fi";
+import { ScaleLoader } from 'react-spinners';
+import Experimental from './experimnets'
+import Table from './tables'
+
+
+
+
+
+
+
+const Home = () => {
+  const { username } = useParams();
+ 
+  const [loading, setLoading] = useState(true);
+  const [userProjects, setUserProjects] = useState([]);
+  const [projectCount, setProjectCount] = useState(0);
+  const [editedProject, setEditedProject] = useState({});
+  const [editedName, setEditedName] = useState('');
+  const [editedDescription, setEditedDescription] = useState('');
+  const [isEditPopupVisible, setIsEditPopupVisible] = useState(false);
+  const [isSuccessMessageVisible, setIsSuccessMessageVisible] = useState(false);
+  
+
+
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const projectResponse = await axios.get(`http://localhost:5000/user-projects/${username}`);
+        setUserProjects(projectResponse.data.projects);
+        setProjectCount(projectResponse.data.project_count);
+        setTimeout(() => setLoading(false), 3000);
+      } catch (error) {
+        console.error('Error:', error);
+        setTimeout(() => setLoading(false), 3000);
+      }
+    };
+
+    fetchProjects();
+  }, [username]);
+
+  const handleEditClick = (project) => {
+    setEditedProject(project);
+    setEditedName(project.project_name);
+    setEditedDescription(project.project_description);
+    setIsEditPopupVisible(true);
+  };
+
+  const handleSaveEdit = () => {
+    // Make an API request to update the project with editedName and editedDescription
+    axios
+      .put(`http://localhost:5000/update-project`, {
+        project_name: editedProject.project_name,
+        project_description: editedDescription,
+      })
+      .then((response) => {
+        if (response.data.success) {
+          setIsSuccessMessageVisible(true);
+        } else {
+          console.error('Error updating project:', response.data.message);
+        }
+      })
+      .catch((error) => {
+        console.error('Error making the request:', error);
+      });
+  };
+
+  const handleOkClick = () => {
+    window.location.reload(); // Refresh the page
+  };
+
+
+
+
+
+  return (
+    <div style={{ width: '100%', display: 'flex', justifyContent: 'center',animation: 'fadeIn 0.3s ease-in-out'}} className="">
+ {loading && (
+        <div style={{ display: 'flex',flexDirection:'column', alignItems: 'center', justifyContent: 'center', height: '100vh',width:'100%' }}>
+         <ScaleLoader color="#3358f4" margin={3} radius={4} speedMultiplier={1} width={10} />
+         <p style={{color:'#9a9a9a',opacitya:'0.6'}}>Loading Data ....</p>
+         
+        
+        </div>
+      )}
+      {!loading && (
+      <div style={{width:'90%',height:'auto', float:'right', color:'#9a9a9a',marginLeft:'230px',animation: 'fadeIn 0.5s ease-in-out'}} className="main-container">
+     
+
+       
+        {loading ? (
+          <p>Loading data...</p>
+        ) : (
+          <div style={{width:'90%',marginLeft:'5%'}} >
+           <Experimental/>
+          </div>
+        )}
+        {isEditPopupVisible && (
+          <div className="edit-popup">
+            <div className="edit-content">
+              <h2>Edit Project</h2>
+              <input
+                type="text"
+                placeholder="Project Name"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Project Description"
+                value={editedDescription}
+                onChange={(e) => setEditedDescription(e.target.value)}
+              />
+              <button onClick={handleSaveEdit}>Save</button>
+              <button onClick={() => setIsEditPopupVisible(false)}>Close</button>
+              {isSuccessMessageVisible && (
+                <div className="success-message">
+                  <p>Project updated successfully!</p>
+                  <button onClick={handleOkClick}>OK</button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+<div style={{display:'flex',justifyContent:'center',marginTop:'20px'}}>
+      <div style={{width:'42%',height:'auto',backgroundColor:'#27293d',padding:'20px',marginInline:'3%', color:'#9a9a9a',borderRadius:'1rem'}}>
+        <h3>User Projects: {projectCount}</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Project Name</th>
+              <th>Project Description</th>
+              <th>Edit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {userProjects.map((project, index) => (
+              <tr key={index}>
+                <td>{project.project_name}</td>
+                <td>{project.project_description}</td>
+                <td>
+                  <button className='edit_home' onClick={() => handleEditClick(project)}> 
+                  <FiEdit  style={{fontSize:'12px', width:'25px',height:'25px'}} />
+                    </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        </div>
+        <div className='influxdata_table_home' >
+            <h2>Table View</h2>
+            <Table/>
+          </div>
+        </div>
+
+
+      </div>
+
+)}
+    </div>
+  );
+};
+
+export default Home;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import '../styles/search.css';
+
+import { useParams } from 'react-router-dom';
+
+
+
+function Search() {
+  const { username } = useParams();
+    const [measurements, setMeasurements] = useState([]);
+    const [selectedMeasurement, setSelectedMeasurement] = useState('');
+    const [fields, setFields] = useState([]);
+    const [selectedFields, setSelectedFields] = useState([]);
+    const [projectName, setProjectName] = useState('');
+    const [dataCreator, setDataCreator] = useState('');
+    const [location, setlocation] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [metadata, setMetadata] = useState([]);
+    const [filteredMetadata, setFilteredMetadata] = useState([]);
+    const [startDate, setStartDate] = useState(null);
+    const [endDate, setEndDate] = useState(null);
+  const [selectedVersion, setSelectedVersion] = useState("");
+    
+    
+  useEffect(() => {
+    fetchMeasurements();
+    handleMetadata();
+  }, []);
+//getting types of measurmentments from influldb
+  const fetchMeasurements = () => {
+    axios.get('http://localhost:5000/measurements')
+      .then(response => setMeasurements(response.data))
+      .catch(error => console.error('Error fetching measurements:', error));
+  };
+  //getting types of feilds from each  measurmentments from influldb
+  const fetchFields = (measurementName) => {
+    axios.get(`http://localhost:5000/fields?measurement=${measurementName}`)
+      .then(response => setFields(response.data))
+      .catch(error => console.error('Error fetching fields:', error));
+  };
+  
+//handle chnage in states for input data in UI forms
+  const handleMeasurementChange = (event) => {
+    const selectedMeasurement = event.target.value;
+    setSelectedMeasurement(selectedMeasurement);
+    if (selectedMeasurement) {
+      fetchFields(selectedMeasurement);
+    } else {
+      setFields([]);
+    }
+  };
+
+  const handleFieldChange = (event) => {
+    const selectedField = event.target.value;
+    if (event.target.checked) {
+      setSelectedFields([...selectedFields, selectedField]);
+    } else {
+      setSelectedFields(selectedFields.filter(field => field !== selectedField));
+    }
+  };
+  const handleprojectNameChange = (event) => {
+    setProjectName(event.target.value);
+  };
+
+  const handleDataCreatorChange = (event) => {
+    setDataCreator(event.target.value);
+  };
+  const handlelocationChange = (event) => {
+    setlocation(event.target.value);
+  };
+  const handleVersionChange = (event) => {
+    const selectedVersion = event.target.value;
+    setSelectedVersion(selectedVersion);
+    const filteredMetadata = metadata.filter(item => item.version === selectedVersion);
+    setFilteredMetadata(filteredMetadata);
+  };
+
+  // function to handle search of data from influxdb
+  const handleSearch = () => {
+    const project_name = projectName;
+    const user_project_name = dataCreator;
+    const data_location=location;
+    const field_names = selectedFields;
+    const selectedMeasurementName = selectedMeasurement;
+
+    axios
+      .post('http://localhost:5000/search', {
+        selectedMeasurement: selectedMeasurementName,
+        selectedFields: field_names,
+        ProjectName: project_name,
+        data_Location:data_location,
+        userProjectName: user_project_name,
+        startDate: startDate ? startDate.toISOString().slice(0, 19).replace('T', ' ') : null,
+        endDate: endDate ? endDate.toISOString().slice(0, 19).replace('T', ' ') : null,
+      })
+      .then(response => {
+        setSearchResults(response.data);
+        toast.success('Search successful!');
+      })
+      .catch(error => {
+        console.error('Error searching:', error);
+        toast.error('Error during search. Please try again.');
+      });
+  };
+
+//function to handle data deletion from influxdb
+
+  const handleDelete = () => {
+    const data_location = location;
+    axios
+      .post(`http://localhost:5000/delete/${username}`, {
+        selectedMeasurement: selectedMeasurement,
+        startDate: startDate ? startDate.toISOString().slice(0, 19).replace('T', ' ') : null,
+        endDate: endDate ? endDate.toISOString().slice(0, 19).replace('T', ' ') : null,
+        dataCreator: dataCreator,
+        data_Location: data_location,
+      })
+      .then(response => {
+        toast.success('Data deleted successfully!');
+        // Optionally, update state or perform any necessary actions after deletion
+      })
+      .catch(error => {
+        console.error('Error deleting data:', error.response);
+  
+        // Check if it's an unauthorized error
+        if (error.response && error.response.status === 401) {
+          toast.error('Unauthorized. Username and data creator do not match.');
+        } else {
+          toast.error('Error during data deletion. Please try again.');
+        }
+      });
+  };
+  
+//fucntion to handle search of metadata from mysql
+  const handleMetadata = () => {
+    const project_name = projectName;
+  
+    // Check if projectName is not empty before making the request
+    if (project_name) {
+      axios
+        .get(`http://localhost:5000/metadata?project_name=${project_name}`)
+        .then(response => {
+          if (response.data.length > 0) {
+            setMetadata(response.data);
+            // Assuming you still want to filter by selectedVersion
+            setFilteredMetadata(response.data.filter(item => item.version === selectedVersion));
+            toast.success('Metadata fetched successfully!', {
+              className: 'success-toast',
+            });
+          } else {
+            toast.warn('No project found with the specified name.', {
+              className: 'warning-toast',
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching metadata:', error);
+          toast.error('Error fetching metadata. Please try again.', {
+            className: 'error-toast',
+          });
+        });
+    } else {
+      // Handle the case when projectName is empty (optional)
+      console.warn('Project name is empty. Skipping metadata fetch.');
+    }
+  };
+
+//Download influxdb data function
+  const downloadCSV = () => {
+    const csvContent = [
+      Object.keys(searchResults[0]).map(header => `${header}`).join(','),
+      ...searchResults.map(row =>
+        Object.values(row).map(value => (typeof value === 'string' ? `${value}` : value)).join(',')
+      ),
+    ].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (navigator.msSaveBlob) {
+      navigator.msSaveBlob(blob, 'search_results.csv');
+    } else {
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = 'search_results.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+
+  //download metadata for datasets form sqldatabase function
+
+  const downloadMetadataCSV = () => {
+    const formattedContent = filteredMetadata.map(item => {
+      return Object.entries(item)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
+    }).join('\n');
+    const blob = new Blob([formattedContent], { type: 'text/plain;charset=utf-8;' });
+    const link = document.createElement('a');  
+    if (navigator.msSaveBlob) {
+      navigator.msSaveBlob(blob, `metadata_${selectedVersion}.txt`);
+    } else {
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = `metadata_${selectedVersion}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  };
+  
+  return (
+    
+    <div style={{width:'80%',height:'fit-content',marginLeft:'15%',marginBottom:'50px'}}>
+     <div>
+      {/* ... (existing code) */}
+      <ToastContainer
+        position="top-center"
+        autoClose={5000} // Adjust the autoClose duration as needed
+        hideProgressBar
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
+    </div>
+    <div className='search_main_container'>
+    <div className='child_one'>
+      <label>Select a Measurement:</label>
+      <select value={selectedMeasurement} onChange={handleMeasurementChange}>
+        <option value="">-- Select Measurement --</option>
+        {measurements.map((measurement, index) => (
+          <option key={index} value={measurement}>
+            {measurement}
+          </option>
+        ))}
+      </select>
+      <div className='feilds_search'>
+      <label>Select Fields:</label>
+      {fields.map((field, index) => (
+        <div key={index}>
+          <label>
+            <input className=''
+           
+              type="checkbox"
+              value={field}
+              checked={selectedFields.includes(field)}
+              onChange={handleFieldChange}
+            />
+            {field}
+          </label>
+        </div>
+      ))}
+       </div>
+       <label>Location:</label>
+      <input 
+      className='searc_data_input'
+        type="text"
+        value={location}
+        onChange={handlelocationChange}
+        placeholder="Enter Location"
+      />
+    </div>
+
+    <div className='child_two'>
+    <label>Project Name:</label>
+      <input
+      className='searc_data_input'
+        type="text"
+        value={projectName}
+        onChange={handleprojectNameChange}
+        placeholder="Enter Project Name"
+      />
+    <label>Start Date:</label>
+      <DatePicker className='start_date searc_data_input'
+     
+        selected={startDate}
+        onChange={date => setStartDate(date)}
+        showTimeSelect
+        timeFormat="HH:mm"
+        timeIntervals={15}
+        dateFormat="yyyy-MM-dd HH:mm:ss"
+      />
+    <label>End Date:</label>
+      <DatePicker
+      className='searc_data_input'
+        selected={endDate}
+        onChange={date => setEndDate(date)}
+        showTimeSelect
+        timeFormat="HH:mm"
+        timeIntervals={15}
+        dateFormat="yyyy-MM-dd HH:mm:ss"
+      />
+    <label>Data Creator:</label>
+      <input
+      className='searc_data_input'
+        type="text"
+        value={dataCreator}
+        onChange={handleDataCreatorChange}
+        placeholder="Enter Data Creator"
+      />
+    <button className='search_submit' onClick={handleSearch}>Search</button>
+    <button className='delete_submit' onClick={handleDelete}>Delete Data</button>
+    </div>
+    </div>
+    <div className='results_container'>
+
+      <div className='seacrh_metadata-container'>
+        <h1>Metadata Details</h1>
+        <button className='fetch_meta_data' onClick={handleMetadata}><span>Click here to fetch</span> Metadata</button>
+
+<label>Select Version:</label>
+
+<select onChange={handleVersionChange}>
+  <option value="">All Versions</option>
+  {[...new Set(metadata.map(item => item.version))].map((version, index) => (
+    <option key={index} value={version}>
+      {version}
+    </option>
+  ))}
+</select>
+        {filteredMetadata.map((item, index) => (
+          <div key={index}>
+             <button className='metadata_download' onClick={downloadMetadataCSV}>Download Metadata CSV</button>
+            {Object.entries(item).map(([key, value]) => (
+              <div key={key}>
+                <h2>{key}</h2>
+                <p>{value}</p>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className='seacrh_influxdb_container'>
+        <h1>InfluxDB Data</h1>
+        <table className="data-table">
+          <thead>
+            <tr>           
+              {searchResults.length > 0 &&
+                Object.keys(searchResults[0]).map((key) => <th key={key}>{key}</th>)}
+            </tr>            
+          </thead>
+          <tbody>
+            {searchResults.map((row, index) => (              
+              <div>
+                 <tr key={index}>
+                <button className='data_download' onClick={downloadCSV}>Download CSV</button>
+                {Object.values(row).map((value, index) => (
+                  <td key={index}>{value}</td>
+                ))}
+                 </tr>
+              </div>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    </div>
+  );
+}
+
+export default Search;
+
+
+
+
+
+
+
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import axios from 'axios';
+import SideNavBar from './SideNavBar';
+import TopNavBar from './TopNavBar';
+import '../styles/Profile.css';
+
+
+const MyProfile = () => {
+  const { username } = useParams();
+  const [userProfile, setUserProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const [editedUserProfile, setEditedUserProfile] = useState({
+    username: '',
+    email: '',
+    profile_picture: null,
+    firstname: '',
+    lastname: '',
+    city: '',
+    country: '',
+    aboutme: '',
+    teamname: '',
+    Address: '',
+  });
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/profile/${username}`);
+        setUserProfile(response.data);
+        setLoading(false);
+
+        // Set the initial edited data
+        setEditedUserProfile({
+          username: response.data.username,
+          email: response.data.email,
+          profile_picture: null,
+          firstname: response.data.firstname || '',
+          lastname: response.data.lastname || '',
+          city: response.data.city || '',
+          country: response.data.country || '',
+          aboutme: response.data.aboutme || '',
+          teamname: response.data.teamname || '',
+          Address: response.data.Address || '',
+        });
+      } catch (error) {
+        setError('Error fetching user profile. Please try again later.');
+        setLoading(false);
+        console.error('Error fetching user profile:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [username]);
+
+  const handleInputChange = (e) => {
+    const { name, value, files } = e.target;
+
+    setEditedUserProfile((prev) => ({
+      ...prev,
+      [name]: files ? files[0] : value,
+    }));
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData();
+    formData.append('username', editedUserProfile.username);
+    formData.append('email', editedUserProfile.email);
+    formData.append('profile_picture', editedUserProfile.profile_picture);
+    formData.append('firstname', editedUserProfile.firstname);
+    formData.append('lastname', editedUserProfile.lastname);
+    formData.append('city', editedUserProfile.city);
+    formData.append('country', editedUserProfile.country);
+    formData.append('aboutme', editedUserProfile.aboutme);
+    formData.append('teamname', editedUserProfile.teamname);
+    formData.append('Address', editedUserProfile.Address);
+
+    try {
+      await axios.put(`http://localhost:5000/profile/${username}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      console.log('User profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+    }
+  };
+
+  return (
+
+
+
+    <div style={{width:'100%',height:'100vh',justifyContent:'center'}}>
+    <TopNavBar /> {/* Include your SideNavBar component here */}
+  <SideNavBar /> {/* Include your SideNavBar component here */}
+<div style={{width:'80%',height:'fit-content',display:'flex',marginLeft:'15%'}} >
+    
+
+      <div  className="Edit_profile_form" style={{}}>
+
+
+
+      
+      {loading ? (
+        <p>Loading user profile...</p>
+      ) : error ? (
+        <p>{error}</p>
+      ) : userProfile ? (
+        <>
+          <h2>Edit Profile</h2>
+          <form onSubmit={handleFormSubmit} className="profile-form">
+  <div className="row">
+    <div className="col">
+      <label htmlFor="teamname">Team Name:</label>
+      <input
+        type="text"
+        id="teamname"
+        name="teamname"
+        value={editedUserProfile.teamname}
+        onChange={handleInputChange}
+      />
+    </div>
+    <div className="col">
+      <label htmlFor="username">Username:</label>
+      <input
+        type="text"
+        id="username"
+        name="username"
+        value={editedUserProfile.username}
+        readOnly
+      />
+    </div>
+    <div className="col">
+      <label htmlFor="email">Email:</label>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        value={editedUserProfile.email}
+        onChange={handleInputChange}
+      />
+    </div>
+  </div>
+  <div className="row">
+    <div className="col">
+      <label htmlFor="firstname">First Name:</label>
+      <input
+        type="text"
+        id="firstname"
+        name="firstname"
+        value={editedUserProfile.firstname}
+        onChange={handleInputChange}
+      />
+    </div>
+    <div className="col">
+      <label htmlFor="lastname">Last Name:</label>
+      <input
+        type="text"
+        id="lastname"
+        name="lastname"
+        value={editedUserProfile.lastname}
+        onChange={handleInputChange}
+      />
+    </div>
+  </div>
+  <div className="row">
+    <div className="col user-address">
+      <label htmlFor="Address">Address:</label>
+      <input style={{width:'90%'}}
+      className='User_Address'
+        type="text"
+        id="Address"
+        name="Address"
+        value={editedUserProfile.Address}
+        onChange={handleInputChange}
+      />
+    </div>
+  </div>
+  <div className="row">
+    <div className="col">
+      <label htmlFor="city">City:</label>
+      <input
+        type="text"
+        id="city"
+        name="city"
+        value={editedUserProfile.city}
+        onChange={handleInputChange}
+      />
+    </div>
+    <div className="col">
+      <label htmlFor="country">Country:</label>
+      <input
+        type="text"
+        id="country"
+        name="country"
+        value={editedUserProfile.country}
+        onChange={handleInputChange}
+      />
+    </div>
+  </div>
+  <div className="row">
+    <div className="col">
+      <label htmlFor="aboutme">About Me:</label>
+      <textarea
+        id="aboutme"
+        name="aboutme"
+        value={editedUserProfile.aboutme}
+        onChange={handleInputChange}
+      ></textarea>
+    </div>
+  </div>
+  <div className="row">
+    <button type="submit">Save Changes</button>
+  </div>
+</form>
+
+       
+      
+        </>
+      ) : (
+        <p></p>
+      )}
+</div>
+{userProfile ? (
+      <div className='Profile_pic'>
+
+            <div>
+              
+              {userProfile.profile_picture ? (
+                <img
+                  src={`data:image/jpeg;base64,${userProfile.profile_picture}`}
+                  alt="Profile"
+                  style={{ maxWidth: '300px', maxHeight: '300px' }}
+                />
+              ) : (
+                <p>No profile picture available</p>
+              )}
+</div>
+            <div>
+              <strong></strong> <p> {userProfile.username} </p> 
+            </div>
+            <div>
+              <strong></strong> <p>{userProfile.teamname|| 'N/A'}</p> 
+            </div>
+     <div>
+              <strong></strong> <p>{userProfile.aboutme || 'N/A'}</p> 
+            </div>
+
+    </div>
+    ) : (
+      <p>No user profile found</p>
+    )}
+    </div>
+    </div>
+  );
+};
+
+export default MyProfile;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import Plot from 'react-plotly.js';
+import { useParams } from 'react-router-dom';
+import '../styles/Loading.css';
+import '../styles/charts.css'
+
+
+
+
+
+
+
+
+const Experimental = () => {
+  const { username } = useParams();
+  const [data, setData] = useState([]);
+
+  
+
+  
+  const [fieldNames, setFieldNames] = useState([]);
+  const [chartTypes, setChartTypes] = useState({});
+  
+  
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/influxdb-data-home/${username}`);
+        setData(response.data.data_list);
+        setFieldNames(response.data.field_names);
+        
+      } catch (error) {
+        console.error('Error:', error);
+       
+      }
+    };
+
+    fetchData();
+  }, [username]);
+
+  useEffect(() => {
+    if (fieldNames && fieldNames.length > 0) {
+      const initialVisibility = {};
+      fieldNames.forEach((fieldName) => {
+        initialVisibility[fieldName] = true;
+      });
+      
+    }
+  }, [fieldNames]);
+
+  const handleToggleChart = (field, type) => {
+    // Update the chart type for the specified field
+    setChartTypes((prevTypes) => ({
+      ...prevTypes,
+      [field]: type,
+    }));
+  };
+ 
+  
+  
+
+  const renderCharts = () => {
+    
+    if (!data || !Array.isArray(data) || data.length === 0 || !fieldNames || fieldNames.length === 0) {
+      return <p>No data available.</p>;
+    }
+  
+    const xData = data.map((item) => item.Time);
+    
+  
+    // Render all fields in a single chart initially
+    const allFieldsChartData = fieldNames.map((field) => {
+      const fieldData = data.filter((item) => item.Field === field);
+      const yData = fieldData.map((item) => item.Value);
+  
+      return {
+        x: xData,
+        y: yData,
+        type: 'scatter',
+        mode: 'lines',
+        fill: 'tozeroy', // Set fill to 'tozeroy' for area chart
+        name: `<span style="color: ${'#3358f4'}">${field}</span>`,
+        line: {
+          color: '#3358f4', // Set line color to blue
+          
+        },
+        text: yData.map((value) => value.toString()), // Set text to values (convert to string if not already)
+        textposition: 'top center', // Adjust the text position as needed
+        textfont: {
+          color: 'yellow', // Set text color to green for the values
+        },
+      };
+    });
+  
+    // Define layout for all charts
+    const allFieldsLayout = {
+      plot_bgcolor: '#27293d',
+      paper_bgcolor: '#27293d',
+     
+      innerHeight:300,
+     
+      xaxis: {
+        gridcolor:'rgba(51, 88, 244, 0.3)',
+        gridwidth: 0.2,
+        title: {
+          text: 'Time',
+          font: {
+            color: '#9a9a9a', // Set x-axis title color to red
+          },
+        },
+
+        type: 'Time',
+        
+        tickfont: {
+          color: '#9a9a9a', // Set x-axis tick color to orange
+        },
+      },
+      yaxis: {
+        showgrid: false,
+        title: {
+          text: 'Values',
+          font: {
+            color: '#9a9a9a', // Set x-axis title color to red
+          },
+        },
+        tickfont: {
+          color: '#9a9a9a', // Set x-axis tick color to orange
+        },
+        
+      },
+      
+    };
+  
+    // Render separate charts for each field
+    const separateCharts = fieldNames.map((field) => {
+      const fieldData = data.filter((item) => item.Field === field);
+      const yData = fieldData.map((item) => item.Value);
+      
+  
+      const chartData = {
+        x: xData,
+        y: yData,
+        type: chartTypes[field] || 'scatter',
+        mode: 'lines',
+        name:`<span style="color: ${'#3358f4'}">${field}</span>`,
+        line: {
+          color: '#3358f4', // Set line color to blue
+        },
+        text: yData.map((value) => value.toString()), // Set text to values (convert to string if not already)
+        textposition: 'left', // Adjust the text position as needed
+       
+
+      
+      };
+  
+      const layout = {
+        plot_bgcolor: '#27293d',
+        paper_bgcolor: '#27293d',
+        xaxis: {
+          gridcolor:'rgba(51, 88, 244, 0.3)',
+        gridwidth: 0.2,
+          title: {
+            text: 'Time',
+            font: {
+              color: '#9a9a9a', // Set x-axis title color to red
+            },
+          },
+
+          
+          type: 'date',
+          
+          tickfont: {
+            color: '#9a9a9a', // Set x-axis tick color to orange
+          },
+        },
+        yaxis: {
+          gshowgrid: false,
+          title: {
+            text: 'Value',
+            font: {
+              color: '#9a9a9a', // Set x-axis title color to red
+            },
+          },
+          
+          tickfont: {
+            color: '#9a9a9a', // Set x-axis tick color to orange
+          },
+        },
+        title: {
+          text: field,
+          font: {
+            color: '#9a9a9a', // Set x-axis title color to red
+            align: 'left',
+          },
+        },
+      };
+  
+      return (
+        <div className='seperate_chart_section' key={field}>
+
+          
+
+          <Plot
+            style={{  width: '100%'}}
+            data={[chartData]}
+            layout={layout}
+          />
+            <div className="toggel_button_seperate_chart">
+            <button className="toggel_button_seperate_chart-btn1" onClick={() => handleToggleChart(field, 'bar')}>Bar</button>
+            <button onClick={() => handleToggleChart(field, 'line')}>Line</button>            
+          </div>
+        </div>
+      );
+    });
+  
+    return (
+      <div className='chart_bundle_view'>
+        {/* Initial chart with all fields */}
+        <div className='bundle_chart_section'>
+       
+          <h3>All Measurements</h3>
+       
+          <div  className="toggel_button_main_chart">
+            <button className='toggel_button_main_chart-button' onClick={() => handleToggleChart('allFields', 'scatter')}>Scatter</button>
+            <button onClick={() => handleToggleChart('allFields', 'bar')}>Bar</button>
+            <button onClick={() => handleToggleChart('allFields', 'line')}>Line</button>
+            <button onClick={() => handleToggleChart('allFields', 'area')}>Area</button>
+          </div>
+          <Plot style={{width: '100%'}} data={allFieldsChartData} layout={allFieldsLayout} />
+        </div>
+  
+        {/* Separate charts for each field */}
+        <div style={{ width: '100%', display: 'flex', flexWrap: 'wrap', justifyContent:'center'}}>
+         
+          {separateCharts}
+        </div>
+      </div>
+    );
+  };
+  
+  
+
+  
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  return (
+    <div className='render_charts_main'>
+      {renderCharts()}
+    </div>
+  );
+};
+
+export default Experimental;
+//////////////////////////////////////////////////
+import React, { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { NavDropdown } from 'react-bootstrap';
+import { BsChevronDown } from 'react-icons/bs';
+import axios from 'axios';
+import '../styles/topnav.css';
+
+const TopNavBar = () => {
+  const { username } = useParams();
+  const [userPicture, setuserPicture] = useState(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/profile/${username}`);
+        setuserPicture(response.data);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [username]);
+
+  return (
+    <div className="top-navbar">
+      <div className="logo">
+       <a>Dashboard</a>
+      </div>
+      <nav>
+        <ul>
+          <li>
+            <div className="dropdown-container">
+              <NavDropdown
+                title={
+                  userPicture ? (
+                    <>
+                      <img
+                        style={{ width: '50px', height: '50px',borderRadius:'50%' }}
+                        src={`data:image/jpeg;base64,${userPicture.profile_picture}`}
+                        alt="Profile"
+                        className="profile-picture"
+                      />
+                      <BsChevronDown className="dropdown-icon" />
+                    </>
+                  ) : (
+                    'Profile'
+                  )
+                }
+                id="basic-nav-dropdown"
+                className="nav-dropdown-menu"
+              >
+            
+                <NavDropdown.Item as={Link} to={`/myprofile/${username}`}>
+                  My Profile
+                  
+                </NavDropdown.Item>
+                <NavDropdown.Item>Logout</NavDropdown.Item>
+              </NavDropdown>
+           
+            </div>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  );
+};
+
+export default TopNavBar;
+
+
+
+
+http://localhost:3000/myprofile/hamza

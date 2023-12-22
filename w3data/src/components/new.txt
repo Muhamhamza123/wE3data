@@ -1,0 +1,820 @@
+import axios from 'axios';
+import { useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import Plot from 'react-plotly.js';
+import './MeasurementProjectsDetails.css';
+
+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
+
+
+
+
+
+
+
+
+
+
+const MeasurementProjectsDetails = () => {
+  const { username } = useParams();
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showTable, setShowTable] = useState(false);
+  const [userProjects, setUserProjects] = useState([]);
+  
+  const [fieldNames, setFieldNames] = useState([]);
+  const [measurementNames, setMeasurementNames] = useState([]);
+  const [selectedMeasurement, setSelectedMeasurement] = useState('');
+  const [selectedFields, setSelectedFields] = useState([]);
+  const [selectedProject, setSelectedProject] = useState('');
+  const [metadata, setMetadata] = useState([]); // New state for metadata
+  const [selectedVersion, setSelectedVersion] = useState(''); // Initialize with an empty string
+  const [uniqueVersions, setUniqueVersions] = useState([]);
+
+  const handleMeasurementSelection = (event) => {
+    const selectedMeasurement = event.target.value;
+    setSelectedMeasurement(selectedMeasurement);
+  };
+
+  const handleProjectSelection = (event) => {
+    const selectedProject = event.target.value;
+    setSelectedProject(selectedProject);
+  };
+  const handleVersionSelection = (event) => {
+    const version = event.target.value;
+    setSelectedVersion(version);
+  };
+  const renderMetadata = () => {
+    // Ensure that there is metadata and a version is selected
+    if (!metadata || metadata.length === 0 || !selectedVersion) {
+      return <p>No metadata available.</p>;
+    }
+  
+    // Filter metadata based on the selected version
+    const filteredMetadata = metadata.filter((meta) => String(meta.version) === selectedVersion);
+    console.log('Filtered Metadata:', filteredMetadata);
+  
+    if (filteredMetadata.length === 0) {
+      return <p>No metadata available for the selected version.</p>;
+    }
+  
+    // Render the metadata for the selected version
+    return (
+      <div>
+        <h2>Metadata for Version: {selectedVersion}</h2>
+
+
+        {filteredMetadata.map((meta, index) => (
+
+
+          <div style={{display:'flex'}} key={index}>
+            <div className="metadata-container">
+            {
+  meta.metadata_id !== undefined && meta.metadata_id !== "" && (
+    <p>Metadata ID: {meta.metadata_id}</p>
+  )}
+{meta.project_id !== undefined && meta.project_id !== "" && (
+    <p>Project ID: {meta.project_id}</p>
+)}
+{meta.abstract !== undefined && meta.abstract !== "" && (
+    <p>Abstract: {meta.abstract}</p>
+)}
+{meta.data_owner !== undefined && meta.data_owner !== "" && (
+    <p>Data Owner: {meta.data_owner}</p>
+)}
+{meta.contact_email !== undefined && meta.contact_email !== "" && (
+    <p>Contact Email: {meta.contact_email}</p>
+)}
+{meta.orcid_id !== undefined && meta.orcid_id !== "" && (
+    <p>ORCID ID: {meta.orcid_id}</p>
+)}
+{meta.other_contributors !== undefined && meta.other_contributors !== "" && (
+    <p>Other Contributors: {meta.other_contributors}</p>
+)}
+{meta.funding_information !== undefined && meta.funding_information !== "" && (
+    <p>Funding Information: {meta.funding_information}</p>
+)}
+{meta.data_license !== undefined && meta.data_license !== "" && (
+    <p>Data License: {meta.data_license}</p>
+)}
+{meta.latitude !== undefined && meta.latitude !== "" && (
+    <p>Latitude: {meta.latitude}</p>
+)}
+{meta.longitude !== undefined && meta.longitude !== "" && (
+    <p>Longitude: {meta.longitude}</p>
+)}
+{meta.time_zone !== undefined && meta.time_zone !== "" && (
+    <p>Time Zone: {meta.time_zone}</p>
+)}
+{meta.unit_of_measurement !== undefined && meta.unit_of_measurement !== "" && (
+    <p>Unit of Measurement: {meta.unit_of_measurement}</p>
+)}
+{meta.sensor_make_and_type !== undefined && meta.sensor_make_and_type !== "" && (
+    <p>Sensor Make and Type: {meta.sensor_make_and_type}</p>
+)}
+{meta.sensor_accuracy !== undefined && meta.sensor_accuracy !== "" && (
+    <p>Sensor Accuracy: {meta.sensor_accuracy}</p>
+)}
+ </div>
+ <div className="metadata-item">
+
+{meta.sampling_method !== undefined && meta.sampling_method !== "" && (
+    <p>Sampling Method: {meta.sampling_method}</p>
+)}
+{meta.related_publication !== undefined && meta.related_publication !== "" && (
+    <p>Related Publication: {meta.related_publication}</p>
+)}
+{meta.additional_notes !== undefined && meta.additional_notes !== "" && (
+    <p>Additional Notes: {meta.additional_notes}</p>
+)}
+{meta.version !== undefined && meta.version !== "" && (
+    <p>Version: {meta.version}</p>
+)}
+{meta.label !== undefined && meta.label !== "" && (
+    <p>Label: {meta.label}</p>
+)}
+
+</div>
+
+
+            {/* Add other metadata fields here */}
+          </div>
+        ))}
+      </div>
+    );
+    
+  };
+  
+  
+    
+    
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/influxdb-data/${username}`, {
+          params: { measurement: selectedMeasurement, project: selectedProject },
+        });
+        setData(response.data.data_list);
+        setFieldNames(response.data.field_names);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [username, selectedMeasurement, selectedProject]);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const projectResponse = await axios.get(`http://localhost:5000/user-projects/${username}`);
+        setUserProjects(projectResponse.data.projects);
+        
+
+        // Set metadata in the state
+        setMetadata(projectResponse.data.metadata);
+
+        // Extract unique versions from metadata and set them in state
+        const versions = projectResponse.data.metadata.map((meta) => meta.version);
+        const uniqueVersions = [...new Set(versions)];
+        setUniqueVersions(uniqueVersions);
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+
+    fetchProjects();
+  }, [username]);
+
+  useEffect(() => {
+    const fetchMeasurementNames = async () => {
+      try {
+        const measurementsResponse = await axios.get('http://localhost:5000/measurements');
+        setMeasurementNames(measurementsResponse.data);
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+
+    fetchMeasurementNames();
+  }, []);
+
+  const toggleView = () => {
+    setShowTable(!showTable);
+  };
+
+  const toggleFieldSelection = (field) => {
+    setSelectedFields((prevSelectedFields) =>
+      prevSelectedFields.includes(field)
+        ? prevSelectedFields.filter((f) => f !== field)
+        : [...prevSelectedFields, field]
+    );
+  };
+
+  const renderTable = () => {
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return <p>No data available.</p>;
+    }
+
+    return (
+      <div style={{width:'100%',overflow:'auto',height:'500px',marginBottom:'20px'}}>
+         <button className='toggel_button' onClick={toggleView}>
+        {showTable ? 'Show Graphs' : 'Show Table'}
+      </button>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              {fieldNames.map((fieldName) => (
+                <th key={fieldName}>{fieldName}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((item, index) => (
+              <tr key={index}>
+                <td>{item.Time}</td>
+                {fieldNames.map((fieldName) => (
+                  <td key={fieldName}>{item.Value}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const renderChart = () => {
+    if (!data || !Array.isArray(data) || data.length === 0 || selectedFields.length === 0) {
+      return <p>No data available.</p>;
+    }
+
+    const filteredData = data.filter((item) => selectedFields.includes(item.Field));
+
+    const traceData = selectedFields.map((field) => {
+      const fieldData = filteredData.filter((item) => item.Field === field);
+      const xData = fieldData.map((item) => item.Time);
+      const yData = fieldData.map((item) => item.Value);
+
+      return {
+        x: xData,
+        y: yData,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: field,
+      };
+    });
+
+    const layout = {
+      plot_bgcolor: '#27293d',
+      paper_bgcolor: '#27293d',
+      innerHeight:600,
+      xaxis: {
+        gridcolor:'rgba(51, 88, 244, 0.3)',
+        gridwidth: 0.2,
+        title: {
+          text: 'Time',
+          font: {
+            color: '#9a9a9a', // Set x-axis title color to red
+          },
+        },
+        type: 'date',
+        rangeselector: {
+          buttons: [
+            {
+              count: 1,
+              label: '1d',
+              step: 'day',
+              stepmode: 'backward',
+            },
+            {
+              count: 7,
+              label: '7d',
+              step: 'day',
+              stepmode: 'backward',
+            },
+            {
+              count: 1,
+              label: '1m',
+              step: 'month',
+              stepmode: 'backward',
+            },
+            {
+              count: 1,
+              label: '1y',
+              step: 'year',
+              stepmode: 'backward',
+            },
+            {
+              step: 'all',
+            },
+          ],
+        },
+        tickfont: {
+          color: '#9a9a9a', // Set x-axis tick color to orange
+        },
+      },
+      yaxis: {
+        showgrid: false,
+        title: {
+          text: 'Values',
+          font: {
+            color: '#9a9a9a', // Set x-axis title color to red
+          },
+         },
+         tickfont: {
+          color: '#9a9a9a', // Set x-axis tick color to orange
+        },
+      },
+     
+    };
+
+    return (
+    <div style={{ width: '100%', marginBottom: '20px',marginTop:'20px'}}>
+
+       <button className='toggel_button' onClick={toggleView}>
+        <br></br>
+        {showTable ? 'Show Graphs' : 'Show Table'}
+      </button>
+     
+    <Plot  style={{width: '100%'}} data={traceData} layout={layout} />
+    </div>
+ )};
+
+
+
+
+
+
+
+
+
+
+  return (
+<div className="MeasurementProjectsDetails-container"> 
+<div className='project_selection'>
+<div style={{width:'40%',height:'auto'}} >
+<h2>Select a Project</h2>
+<div>
+  <select onChange={handleProjectSelection}>
+    <option value="">Select a project</option>
+    {userProjects.map((project, index) => (
+      <option key={index} value={project.project_name}>
+        {project.project_name}
+      </option>
+    ))}
+  </select>
+</div>
+
+{selectedProject && (
+  <div>
+    <div className='project_description_section'>
+    <h3>Project Description</h3>
+    <p>{userProjects.find((project) => project.project_name === selectedProject)?.project_description}</p>
+    </div>
+    <div>
+  <h2>Meta Data For The Project</h2>
+  <select onChange={handleVersionSelection}>
+    <option value="">Select a version</option>
+    {/* Render options based on unique versions */}
+    {uniqueVersions.map((version, index) => (
+      <option key={index} value={version}>
+        {version}
+      </option>
+      
+    ))}
+  </select>  
+</div>
+  </div>
+)}
+     </div>
+     <div style={{width:'40%',height:'auto'}} >
+     <div>
+        <h2>Measurement Names</h2>
+        <select onChange={handleMeasurementSelection}>
+          <option value="">Select a measurement</option>
+          {measurementNames.map((measurement, index) => (
+            <option key={index} value={measurement}>
+              {measurement}
+            </option>
+          ))}
+        </select>
+      </div>         
+      <div style={{marginTop:'20px'}}>
+        {fieldNames.map((fieldName) => (
+         <label key={fieldName}>
+            <input
+              type="checkbox"
+              value={fieldName}
+              checked={selectedFields.includes(fieldName)}
+              onChange={() => toggleFieldSelection(fieldName)}
+            />
+            {fieldName}
+          </label>
+        ))}
+      </div>      
+     </div>
+      {/* Display metadata information */}  
+    </div>      
+    <div className='metadata_section'>
+    <h2>Meta Data For The Project </h2>
+    {renderMetadata()}
+    </div>   
+    <div className='chart_section'>
+    {loading ? (
+        <p>Loading data...</p>
+      ) : showTable ? (
+        <div>
+          
+          <h2>Table View</h2>
+          {renderTable()}
+        </div>
+      ) : (
+        <div style={{width:'100%'}}>
+          
+          <h2>Chart View</h2>
+        {renderChart()}
+        </div>
+      )}
+    </div>
+    </div>    
+  );
+};
+
+export default MeasurementProjectsDetails;
+
+
+
+
+
+
+
+
+
+
+
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
+
+# ... (your other imports)
+
+app = Flask(__name__)
+jwt = JWTManager(app)
+
+# ... (your other configurations)
+
+@app.route('/delete/<username>', methods=['POST'])
+@jwt_required()
+def delete_data(username):
+    try:
+        # Extract the current user from the JWT token
+        current_user = get_jwt_identity()
+
+        data = request.get_json()
+        selected_measurement = data.get('selectedMeasurement')
+        start_time_str = data.get('startDate')
+        stop_time_str = data.get('endDate')
+        location = data.get('data_Location')
+        data_creator = data.get('dataCreator')
+
+        # Check if the current user from the JWT token matches the provided username
+        if current_user != username:
+            return jsonify({'error': 'Unauthorized. Token user and provided username do not match.'}), 401
+
+        # ... (rest of your code)
+
+    except Exception as e:
+        return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+import { useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import Plot from 'react-plotly.js';
+import '../styles/MeasurementProjectsDetails.css';
+import { fetchData, fetchUserProjects, fetchMeasurementNames } from '../api-services/measurmnets-api-services';
+import MetadataDownload from '../global-components/filtereddata';
+
+
+const MeasurementProjectsDetails = () => {
+  const { username } = useParams();
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showTable, setShowTable] = useState(false);
+  const [userProjects, setUserProjects] = useState([]);  
+  const [fieldNames, setFieldNames] = useState([]);
+  const [measurementNames, setMeasurementNames] = useState([]);
+  const [selectedMeasurement, setSelectedMeasurement] = useState('');
+  const [selectedFields, setSelectedFields] = useState([]);
+  const [selectedProject, setSelectedProject] = useState('');
+  const [metadata, setMetadata] = useState([]); // New state for metadata
+  const [selectedVersion, setSelectedVersion] = useState(''); // Initialize with an empty string
+  const [uniqueVersions, setUniqueVersions] = useState([]);
+
+
+
+  useEffect(() => {
+    fetchData(username, selectedMeasurement, selectedProject, setData, setFieldNames, setLoading);
+  }, [username, selectedMeasurement, selectedProject]);
+
+  useEffect(() => {
+    fetchUserProjects(username, setUserProjects, setMetadata, setUniqueVersions);
+  }, [username]);
+
+  useEffect(() => {
+    fetchMeasurementNames(setMeasurementNames);
+  }, []);
+  const toggleView = () => {
+    setShowTable(!showTable);
+  };
+
+
+
+
+  const handleMeasurementSelection = (event) => {
+    const selectedMeasurement = event.target.value;
+    setSelectedMeasurement(selectedMeasurement);
+  };
+
+  const handleProjectSelection = (event) => {
+    const selectedProject = event.target.value;
+    setSelectedProject(selectedProject);
+  };
+
+  const handleVersionSelection = (event) => {
+    const version = event.target.value;
+    setSelectedVersion(version);
+  
+  };
+  const toggleFieldSelection = (field) => {
+    setSelectedFields((prevSelectedFields) =>
+      prevSelectedFields.includes(field)
+        ? prevSelectedFields.filter((f) => f !== field)
+        : [...prevSelectedFields, field]
+    );
+  };
+
+
+
+
+
+
+
+
+
+
+
+  //Metadata fucntion  
+  const renderMetadata = () => {
+
+    // Ensure that there is metadata and a version is selected
+    if (!metadata || metadata.length === 0 || !selectedVersion) {
+      return <p>No metadata available.</p>;
+    }
+  
+    // Filter metadata based on the selected version
+    const filteredMetadata = metadata.filter((meta) => String(meta.version) === selectedVersion);
+    console.log('Filtered Metadata:', filteredMetadata);
+  
+    if (filteredMetadata.length === 0) {
+      return <p>No metadata available for the selected version.</p>;
+    }
+  
+    // Render the metadata for the selected version
+    return (
+      <div>
+        <h2>Metadata for Version: {selectedVersion}</h2>
+        {filteredMetadata.length > 0 && (
+        <MetadataDownload filteredMetadata={filteredMetadata} selectedVersion={selectedVersion} />
+      )}
+  
+        {filteredMetadata.map((meta, index) => (
+          <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '20px' }} key={index}>
+            {Object.entries(meta).map(([key, value]) => (
+              // Check if the value is not empty before rendering
+              value !== undefined && value !== "" && (
+                <div key={key} style={{ width: '50%' }}>
+                  <p><strong>{key.replace(/_/g, ' ').toUpperCase()}:</strong></p>
+                  <p>{value}</p>
+                </div>
+              )
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  };
+  
+  
+    
+    
+
+
+//Table view for influcdb data coming in//////
+
+  const renderTable = () => {
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return <p>No data available.</p>;
+    }
+
+    return (
+      <div style={{width:'100%',overflow:'auto',height:'500px',marginBottom:'20px'}}>
+         <button className='toggel_button' onClick={toggleView}>
+        {showTable ? 'Show Graphs' : 'Show Table'}
+      </button>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              {fieldNames.map((fieldName) => (
+                <th key={fieldName}>{fieldName}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((item, index) => (
+              <tr key={index}>
+                <td>{item.Time}</td>
+                {fieldNames.map((fieldName) => (
+                  <td key={fieldName}>{item.Value}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+
+
+  //chart view for influxdb data coming in//
+  const renderChart = () => {
+    if (!data || !Array.isArray(data) || data.length === 0 || selectedFields.length === 0) {
+      return <p>No data available.</p>;
+    }
+    const filteredData = data.filter((item) => selectedFields.includes(item.Field));
+    const traceData = selectedFields.map((field) => {
+      const fieldData = filteredData.filter((item) => item.Field === field);
+      const xData = fieldData.map((item) => item.Time);
+      const yData = fieldData.map((item) => item.Value);
+      return {
+        x: xData,
+        y: yData,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: field,
+      };
+    });
+    const layout = {
+      plot_bgcolor: '#27293d',
+      paper_bgcolor: '#27293d',
+      innerHeight:600,
+      xaxis: {
+        gridcolor:'rgba(51, 88, 244, 0.3)',
+        gridwidth: 0.2,
+        title: {
+          text: 'Time',
+          font: {
+            color: '#9a9a9a', // Set x-axis title color to red
+          },
+        },
+        type: 'date',
+    
+        tickfont: {
+          color: '#9a9a9a', // Set x-axis tick color to orange
+        },
+      },
+      yaxis: {
+        showgrid: false,
+        title: {
+          text: 'Values',
+          font: {
+            color: '#9a9a9a', // Set x-axis title color to red
+          },
+         },
+         tickfont: {
+          color: '#9a9a9a', // Set x-axis tick color to orange
+        },
+      },     
+    };
+
+    return (
+    <div style={{ }}>
+       <button className='toggel_button' onClick={toggleView}>
+        {showTable ? 'Show Graphs' : 'Show Table'}
+      </button>     
+    <Plot  style={{width: '100%'}} data={traceData} layout={layout} />
+    </div>
+ )};
+
+
+
+
+
+
+
+
+
+
+  return (
+<div className="MeasurementProjectsDetails-container"> 
+<div className='project_selection'>
+<div style={{width:'40%',height:'auto'}} >
+<h2>Select a Project</h2>
+<div>
+  <select onChange={handleProjectSelection}>
+    <option value="">Select a project</option>
+    {userProjects.map((project, index) => (
+      <option key={index} value={project.project_name}>
+        {project.project_name}
+      </option>
+    ))}
+  </select>
+</div>
+
+{selectedProject && (
+  <div>
+    <div className='project_description_section'>
+    <h3>Project Description</h3>
+    <p>{userProjects.find((project) => project.project_name === selectedProject)?.project_description}</p>
+    </div>
+    <div>
+  <h2>Meta Data For The Project</h2>
+  <select onChange={handleVersionSelection}>
+    <option value="">Select a version</option>
+    {/* Render options based on unique versions */}
+    {uniqueVersions.map((version, index) => (
+      <option key={index} value={version}>
+        {version}
+      </option>
+      
+    ))}
+  </select>  
+</div>
+  </div>
+)}
+     </div>
+     <div style={{width:'40%',height:'auto'}} >
+     <div>
+        <h2>Measurement Names</h2>
+        <select onChange={handleMeasurementSelection}>
+          <option value="">Select a measurement</option>
+          {measurementNames.map((measurement, index) => (
+            <option key={index} value={measurement}>
+              {measurement}
+            </option>
+          ))}
+        </select>
+      </div>         
+      <div style={{marginTop:'20px'}}>
+        {fieldNames.map((fieldName) => (
+         <label key={fieldName}>
+            <input
+              type="checkbox"
+              value={fieldName}
+              checked={selectedFields.includes(fieldName)}
+              onChange={() => toggleFieldSelection(fieldName)}
+            />
+            {fieldName}
+          </label>
+        ))}
+      </div>      
+     </div>
+      {/* Display metadata information */}  
+    </div>      
+    <div className='metadata_section'>
+    <h2>Meta Data For The Project </h2>
+    {renderMetadata()}
+    </div>   
+    <div className='chart_section'>
+    {loading ? (
+        <p>Loading data...</p>
+      ) : showTable ? (
+        <div>
+          
+          <h2>Table View</h2>
+          {renderTable()}
+        </div>
+      ) : (
+        <div style={{width:'100%'}}>
+          
+          <h2>Chart View</h2>
+        {renderChart()}
+        </div>
+      )}
+    </div>
+    </div>    
+  );
+};
+
+export default MeasurementProjectsDetails;
