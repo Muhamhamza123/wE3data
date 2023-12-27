@@ -37,10 +37,10 @@ mysql_pool = pooling.MySQLConnectionPool(
     pool_name="mysql_pool",
     pool_size=connection_limit,
     pool_reset_session=True,
-    host="localhost",
-    user="root",
-    passwd="Nikon12345",
-    database="w3data-users",
+    host="86.50.252.118:3306",
+    user="hamza",
+    passwd="Nikon12345!",
+    database="w3database",
     connect_timeout=10,
 )
 
