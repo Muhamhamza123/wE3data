@@ -19,7 +19,7 @@ from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
 
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, origins='http://localhost:3000')
+CORS(app, supports_credentials=True, origins='https://we3database.onrender.com')
 
 # MySQL connection pooling configuration
 
@@ -92,7 +92,7 @@ def login():
     if request.method == 'OPTIONS':
         # Respond to the preflight OPTIONS request
         response = make_response()
-        response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+        response.headers['Access-Control-Allow-Origin'] = 'https://we3database.onrender.com'
         response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         response.headers['Access-Control-Max-Age'] = '3600'
