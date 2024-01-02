@@ -23,15 +23,15 @@ CORS(app, supports_credentials=True, origins='http://localhost:3000')
 
 # MySQL connection pooling configuration
 
- mysql_pool = pooling.MySQLConnectionPool(
-  pool_name="mysql_pool",
-     pool_size=32,
-  pool_reset_session=True,
- host="86.50.252.118",
-  user="hamza",
- passwd="Nikon12345!",
-   database="w3data-users",
- connect_timeout=10,
+mysql_pool = pooling.MySQLConnectionPool(
+    pool_name="mysql_pool",
+      pool_size=32,
+     pool_reset_session=True,
+     host="86.50.252.118",
+     user="hamza",
+     passwd="Nikon12345!",
+     database="w3data-users",
+     connect_timeout=10,
  )
 
 
