@@ -35,12 +35,13 @@ mysql_pool = pooling.MySQLConnectionPool(
     pool_name="mysql_pool",
     pool_size=connection_limit,
     pool_reset_session=True,
-    host="localhost",
-    user="root",
-    passwd="Nikon12345",
+    host="86.50.252.118:3306",
+    user="hamza",
+    passwd="Nikon12345!",
     database="w3data-users",
     connect_timeout=10000,
 )
+
 
 # JWT configuration
 app.config['SECRET_KEY'] = 'your_secret_key'
