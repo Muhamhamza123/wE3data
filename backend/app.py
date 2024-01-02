@@ -23,13 +23,11 @@ import jwt
 from datetime import datetime, timedelta
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 from mysql.connector import Error
+from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
+
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, origins='http://localhost:3000')
-
-# Session configuration
-app.config['SESSION_TYPE'] = 'filesystem'
-Session(app)
+CORS(app, supports_credentials=True, origins='https://we3database.onrender.com')
 
 # MySQL connection pooling configuration
 connection_limit = 32
@@ -37,11 +35,11 @@ mysql_pool = pooling.MySQLConnectionPool(
     pool_name="mysql_pool",
     pool_size=connection_limit,
     pool_reset_session=True,
-    host = "86.50.252.118",
-    user="hamza",
-    passwd="Nikon12345!",
+    host="localhost",
+    user="root",
+    passwd="Nikon12345",
     database="w3data-users",
-    connect_timeout=10,
+    connect_timeout=10000,
 )
 
 # JWT configuration
@@ -55,11 +53,9 @@ jwt = JWTManager(app)
 # InfluxDB configuration
 influxdb_url = 'http://86.50.252.118:8086'
 influxdb_token = 'ynNB0w-RD65XSObOiDay0m1brg8Am14l2wFwB9ra2TYUN_6OFlaVGtStZD7S4bmJPJEri5Spmke22UKgw_qi_w=='
-
-#'hmahVgRbKdqfQD9Jt3P--7SA1XpHzCCLMarPqeSfeQikSrycqt9W28ZOaBk7cXx_rsMhmF3ImDh6bC2fu-LyjQ=='
 influxdb_org = 'w3data'
 influxdb_bucket = "w3data"  # Update with your InfluxDB bucket
-
+#gittokken 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
 # InfluxDB connection pooling configuration
 influxdb_pool = InfluxDBClient(
     url=influxdb_url,
@@ -69,9 +65,22 @@ influxdb_pool = InfluxDBClient(
 
 # Initialize the InfluxDB query API
 query_api = influxdb_pool.query_api()
-
 print("Connected to the databases")
-
+# Function to get a MySQL connection from the pool
+def get_mysql_connection():
+    connection = mysql_pool.get_connection()
+    return connection
+# Function to close a MySQL connection
+def close_mysql_connection(connection, cursor):
+    try:
+        if cursor:
+            cursor.close()
+            print("Cursor closed.")
+        if connection:
+            connection.close()
+            print("Connection closed.")
+    except Exception as e:
+        logging.error("Error closing MySQL connection: %s", e)
 
 def generate_token(username):
     payload = {
@@ -81,100 +90,83 @@ def generate_token(username):
     }
     token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
     return token
-
-
 def set_access_token_local_storage(response, access_token):
     response.headers['Authorization'] = f'Bearer {access_token}'
     response.headers['Access-Control-Expose-Headers'] = 'Authorization'  # Allow the client to access the Authorization header
-
 @app.route('/login', methods=['POST', 'OPTIONS'])
 def login():
     if request.method == 'OPTIONS':
         # Respond to the preflight OPTIONS request
         response = make_response()
-        response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+        response.headers['Access-Control-Allow-Origin'] = 'https://we3database.onrender.com'
         response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         response.headers['Access-Control-Max-Age'] = '3600'
         return response
-
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
     print(f"Received data: {data}")
-
     connection = mysql_pool.get_connection()
     cursor = connection.cursor()
-
     try:
         cursor.execute("SELECT username FROM users WHERE username=%s AND password_hash=%s", (username, password))
         user = cursor.fetchone()
-
         if user:
             stored_username = user[0]
             access_token = create_access_token(identity=stored_username)
             response = jsonify(success=True, token=access_token)
-            response.headers['Content-Type'] = 'application/json; charset=utf-8'
             set_access_token_local_storage(response, access_token)
             close_mysql_connection(connection, cursor)
             print(f"User {stored_username} has logged in. Token: {access_token}")
-            return response
-        else:
+            return response, 200  # 200 OK
+        else:            
             close_mysql_connection(connection, cursor)
-            return jsonify(success=False)
+            return jsonify(success=False, error='Invalid username or password'), 404  # 404 Not Found      
 
+    except mysql.connector.Error as e:
+        # Handle MySQL database errors
+        close_mysql_connection(connection, cursor)        
+        return jsonify(success=False, error=str(e)), 500
     except Exception as e:
         # Handle database errors appropriately
         close_mysql_connection(connection, cursor)
-        return jsonify(success=False, error=str(e))
-
-
-
+        return jsonify(success=False, error=str(e)), 500
 # ... (previous code)
+    
 @app.route('/update_metadata', methods=['PUT'])
 def update_metadata():
     data = request.get_json()
-
     if 'selectedProject' not in data or 'version' not in data or 'editedMetadata' not in data:
         return jsonify({'error': 'Invalid request'}), 400
-
     projectname = data['selectedProject']
     version = data['version']
     edited_metadata = data['editedMetadata']
-
     # Print statement to log the 'version' value
     print(f"Received version: {version}")
     print(projectname)
     print(edited_metadata)
-
     connection = mysql_pool.get_connection()
     cursor = connection.cursor()
-
     if connection:
         try:
             cursor = connection.cursor(dictionary=True)
-
             # Retrieve project_id based on projectname
             cursor.execute("SELECT project_id FROM projects WHERE project_name = %s", (projectname,))
             project_result = cursor.fetchone()
-
             if project_result:
                 project_id = project_result['project_id']
-
                 # Retrieve existing metadata
                 cursor.execute("SELECT * FROM `project_metadata` WHERE `project_id` = %s AND `version` = %s", (project_id, version))
                 existing_metadata = cursor.fetchone()
-
                 if existing_metadata:
                     # Build the UPDATE query dynamically based on changed fields
                     update_query = "UPDATE `project_metadata` SET "
                     updates = []
-
                     for key, value in edited_metadata.items():
                         # Check if the field has changed
                         if existing_metadata.get(key) != value:
                             updates.append(f"`{key}` = %s")
-
                     if updates:
                         update_query += ', '.join(updates)
                         update_query += " WHERE `project_id` = %s AND `version` = %s"
@@ -215,50 +207,15 @@ def update_metadata():
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Function to get a MySQL connection from the pool
-def get_mysql_connection():
-    connection = mysql_pool.get_connection()
-    return connection
-
-# Function to close a MySQL connection
-def close_mysql_connection(connection, cursor):
-    try:
-        if cursor:
-            cursor.close()
-            print("Cursor closed.")
-        if connection:
-            connection.close()
-            print("Connection closed.")
-    except Exception as e:
-        logging.error("Error closing MySQL connection: %s", e)
-
 # Function to get an InfluxDB connection from the pool
 def get_influxdb_connection():
     return influxdb_pool
-
 # Function to close an InfluxDB connection
-def close_influxdb_connection():
-    # The InfluxDB connection pool handles connection reuse, so no need to explicitly close it
-    pass
 
-def get_project_metadata(cursor, project_ids):
+
+def get_project_metadata(cursor, project_ids,connection):
     try:
+        cursor = connection.cursor(dictionary=True)
         # Format the project IDs as a string for the SQL query
         project_ids_str = ",".join(map(str, project_ids))
         # Get the column names from the table
@@ -276,6 +233,10 @@ def get_project_metadata(cursor, project_ids):
     except Exception as e:
         print("Error fetching metadata:", e)
         return []
+    finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
 
 @app.route('/user-projects/<username>', methods=['GET'])
 def fetch_user_projects(username):
@@ -311,19 +272,11 @@ def fetch_user_projects(username):
                     project_metadata = next((meta for meta in metadata if meta['project_id'] == project['project_id']), {})
                     project.update(project_metadata)                  
 
-                response_data = {
+                return jsonify({
                     'projects': projects,
                     'project_count': len(projects),
                     'metadata': metadata
-                }
-                response = jsonify(response_data)
-                response.headers['Content-Type'] = 'application/json; charset=utf-8'
-
-                return response
-
-                
-                
-               
+                })
 
             except Exception as e:
                 print("Error fetching metadata:", e)
@@ -334,17 +287,11 @@ def fetch_user_projects(username):
                 })
 
     close_mysql_connection(connection, cursor)
-    response_data = {
-                    'projects': [],
-                    'project_count': 0,
-                    'metadata': []
-                }
-
-                # Create a response with JSON content type and charset=utf-8
-    response = jsonify(response_data)
-    response.headers['Content-Type'] = 'application/json; charset=utf-8'
-
-    return response
+    return jsonify({
+        'projects': [],
+        'project_count': 0,
+        'metadata': []
+    })
     
 
 def fetch_and_format_influx_data(username, measurement_name, project_name):
@@ -375,7 +322,7 @@ def fetch_and_format_influx_data(username, measurement_name, project_name):
                 'Value': value,
             })         
 
-    close_influxdb_connection()
+    
     return {
         'data_list': data_list,
         'field_names': list(field_names),  # Convert the set of field names to a list
@@ -441,10 +388,7 @@ def get_influxdb_data_home(username):
     # Print the selected measurement name
     
     data = fetch_and_format_influx_data_home(username)
-    response = jsonify(data)
-    response.headers['Content-Type'] = 'application/json; charset=utf-8'
-    
-    return response
+    return jsonify(data)
     
 def fetch_and_format_influx_data_home(username):
     client = get_influxdb_connection()
@@ -469,7 +413,7 @@ def fetch_and_format_influx_data_home(username):
                 'Value': value,
             })          
 
-    close_influxdb_connection()
+    
     return {
         'data_list': data_list,
         'field_names': list(field_names),  # Convert the set of field names to a list
@@ -526,10 +470,7 @@ def user_profile(username):
                     close_mysql_connection(connection, cursor)
                     
 
-                    response = jsonify(user_profile)
-                    response.headers['Content-Type'] = 'application/json; charset=utf-8'
-                    return response
-                
+                    return jsonify(user_profile)
                 else:
                     return jsonify({'error': 'User not found'}), 404
             elif request.method == 'PUT':
@@ -612,7 +553,7 @@ def user_profile(username):
 
 
 
-query_api = influxdb_pool.query_api()
+#query_api = influxdb_pool.query_api()
 
 # InfluxDB Write API endpoint
 write_api = influxdb_pool.write_api(write_options=WriteOptions(batch_size=50000, flush_interval=10_000))
@@ -669,8 +610,66 @@ def process_csv(file_path, data_creator, project_name, location, date_generated,
             csv_reader = csv.reader(file, delimiter=';')  # Update delimiter if needed
 
             header = next(csv_reader)
+            if "Date" in header and "Time" not in header:
+                date_index = header.index("Date")
 
-            if "Date" in header and "Time" in header:
+                for row_number, row in enumerate(csv_reader, start=2):  # Start at 2 to account for header
+                    if len(row) < len(header):
+                        row += [None] * (len(header) - len(row))
+
+                    date_str = row[date_index].strip()
+                    timestamp_str = f"{date_str}"
+
+                    # Choose timestamp format based on the presence of dot
+                    try:
+                        timestamp_format = '%Y-%m-%d' if '.' not in timestamp_str else '%Y-%m-%d %H:%M:%S.%f'
+                        timestamp = datetime.strptime(timestamp_str, timestamp_format)
+                    except ValueError:
+                        error_msg = f"Error parsing timestamp at line {row_number}: {timestamp_str}"
+                        print(error_msg)
+                        return {'success': False, 'error': error_msg}
+
+                    rfc3339_timestamp = timestamp.isoformat()
+
+                    data_point = Point(selected_measurement)
+
+                    # Add the new fields (Data Creator, Project Name, Location, and Date Generated)
+                    data_point.tag("data_creator", data_creator)
+                    data_point.tag("project_name", project_name)
+                    data_point.tag("location", location)
+                    data_point.tag("date_generated", date_generated)
+
+                    for i, field_name in enumerate(header):
+                        if field_name == "Date":
+                            continue  # Skip Date column
+
+                        # Check for "NA" or empty values
+                        if row[i] in ["NA", ""]:
+                            value = None  # Represent null value
+                        else:
+                            # Attempt to convert the value to float, if it fails, treat it as a string
+                            try:
+                                value = float(row[i])
+                            except (ValueError, TypeError):
+                                value = row[i]
+
+                        data_point.field(field_name, value)
+
+                    data_point.time(rfc3339_timestamp, WritePrecision.NS)
+
+                    # Append the data point to the list
+                    data_points.append(data_point)
+
+                    # Check if the number of data points reaches the batch size
+                    if len(data_points) == 50000:
+                        # Write data points in chunks
+                        write_data_points(data_points)
+                        data_points = []
+    
+    
+                
+
+            elif "Date" in header and "Time" in header:
                 date_index = header.index("Date")
                 time_index = header.index("Time")
 
@@ -711,11 +710,10 @@ def process_csv(file_path, data_creator, project_name, location, date_generated,
                         if row[i] in ["NA", ""]:
                             value = None  # Represent null value
                         else:
-                            try:
+                            try:                                
                                 value = float(row[i])
                             except (ValueError, TypeError):
-                                error_msg = f"Error parsing value at line {row_number}, column {field_name}: {row[i]}"
-                                print(error_msg)
+                                value = row[i]   
                                 return {'success': False, 'error': error_msg}
 
                         data_point.field(field_name, value)
@@ -759,8 +757,8 @@ def process_csv(file_path, data_creator, project_name, location, date_generated,
                     data_point.tag("date_generated", date_generated)
 
                     for i, field_name in enumerate(header):
-                        if field_name in ["Date", "Time"]:
-                            continue  # Skip Date and Time columns
+                        if field_name in ["timestamp"]:
+                            continue  # Skip timestamp columns
 
                         # Check for "NA" or empty values
                         if row[i] in ["NA", ""]:
@@ -768,10 +766,9 @@ def process_csv(file_path, data_creator, project_name, location, date_generated,
                         else:
                             try:
                                 value = float(row[i])
-                            except (ValueError, TypeError):
-                                error_msg = f"Error parsing value at line {row_number}, column {field_name}: {row[i]}"
-                                print(error_msg)
-                                return {'success': False, 'error': error_msg}
+                            except (ValueError, TypeError):                               
+                                value = row[i]   
+                                return {'success': False, 'error': error_msg}  
 
                         data_point.field(field_name, value)
 
@@ -986,15 +983,9 @@ def generate_version(location, longitude, latitude, measurement_name, version):
 
 
 
-from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
 
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from influxdb_client import InfluxDBClient
-import pandas as pd
-from pandas import DataFrame
-from datetime import datetime
-import mysql.connector
+
+
 
 
 
@@ -1157,13 +1148,6 @@ def delete_data(username):
         return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
 
 
-
-
-
-
-
-
-
 @app.route('/metadata', methods=['GET'])
 def get_metadata():
     try:
@@ -1227,27 +1211,7 @@ def get_metadata():
     except Exception as e:
         return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
     finally:
-                    close_mysql_connection(connection, cursor)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        close_mysql_connection(connection, cursor)
 
 
 
