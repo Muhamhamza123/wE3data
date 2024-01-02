@@ -1,21 +1,13 @@
 # Import necessary libraries
-from flask import Flask, request, jsonify, session
-from flask_session import Session
-import mysql.connector
-from mysql.connector import pooling  # Added pooling module
-from flask_cors import CORS
 import csv
-from datetime import datetime
 from influxdb_client.client.write_api import WriteOptions, WritePrecision
 from influxdb_client import InfluxDBClient, Point
 import logging
 import base64
 import pandas as pd
 from pandas import DataFrame
-from datetime import datetime
 import requests
 from flask import Flask, request, jsonify, session, make_response
-from flask_session import Session
 from flask_cors import CORS
 import mysql.connector
 from mysql.connector import pooling
@@ -27,17 +19,28 @@ from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
 
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, origins='https://we3database.onrender.com')
+CORS(app, supports_credentials=True, origins='http://localhost:3000')
 
 # MySQL connection pooling configuration
+#connection_limit = 32
+# mysql_pool = pooling.MySQLConnectionPool(
+  #   pool_name="mysql_pool",
+    #  pool_size=None,
+    # pool_reset_session=True,
+    # host="86.50.252.118",
+    # user="hamza",
+    # passwd="Nikon12345!",
+    # database="w3data-users",
+    # connect_timeout=10,
+# )
+
 mysql_pool = mysql.connector.connect(
     host="86.50.252.118",
     user="hamza",
     passwd="Nikon12345!",
     database="w3data-users",
-    connect_timeout=10,
+    connect_timeout=100,
 )
-
 
 # JWT configuration
 app.config['SECRET_KEY'] = 'your_secret_key'
@@ -95,7 +98,7 @@ def login():
     if request.method == 'OPTIONS':
         # Respond to the preflight OPTIONS request
         response = make_response()
-        response.headers['Access-Control-Allow-Origin'] = 'https://we3database.onrender.com'
+        response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
         response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         response.headers['Access-Control-Max-Age'] = '3600'
@@ -119,7 +122,7 @@ def login():
             return response, 200  # 200 OK
         else:            
             close_mysql_connection(connection, cursor)
-            return jsonify(success=False, error='Invalid username or password'), 404  # 404 Not Found      
+            return jsonify(success=False, error='Invalid username or password'), 404  # 404 Not Found       
 
     except mysql.connector.Error as e:
         # Handle MySQL database errors
