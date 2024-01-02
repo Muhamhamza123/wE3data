@@ -36,7 +36,7 @@ mysql_pool = mysql.connector.connect(
     passwd="Nikon12345!",
     database="w3data-users",
     connect_timeout=10,
-))
+)
 
 
 # JWT configuration
