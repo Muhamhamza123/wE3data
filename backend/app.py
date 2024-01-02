@@ -22,25 +22,19 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True, origins='http://localhost:3000')
 
 # MySQL connection pooling configuration
-#connection_limit = 32
-# mysql_pool = pooling.MySQLConnectionPool(
-  #   pool_name="mysql_pool",
-    #  pool_size=None,
-    # pool_reset_session=True,
-    # host="86.50.252.118",
-    # user="hamza",
-    # passwd="Nikon12345!",
-    # database="w3data-users",
-    # connect_timeout=10,
-# )
 
-mysql_pool = mysql.connector.connect(
-    host="86.50.252.118",
-    user="hamza",
-    passwd="Nikon12345!",
-    database="w3data-users",
-    connect_timeout=100,
-)
+ mysql_pool = pooling.MySQLConnectionPool(
+  pool_name="mysql_pool",
+     pool_size=32,
+  pool_reset_session=True,
+ host="86.50.252.118",
+  user="hamza",
+ passwd="Nikon12345!",
+   database="w3data-users",
+ connect_timeout=10,
+ )
+
+
 
 # JWT configuration
 app.config['SECRET_KEY'] = 'your_secret_key'
