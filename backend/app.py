@@ -20,23 +20,13 @@ from flask import Flask, send_from_directory
 
 from flask import Flask, send_from_directory
 import os
+app = Flask(__name__, static_folder='w3data/build', static_url_path='')
 
-app = Flask(__name__, static_folder='w3data/build', static_url_path='/')
-
-@app.route('/')
-@app.route('/home/<username>/')
-@app.route('/home/<username>/<path:path>')
-def catch_all(username=None, path=''):
-    print(f"Serving with username '{username}' and path '{path}'")
-
-    # If a username is provided, adjust the static folder path accordingly
-    if username:
-        static_folder_path = os.path.join('w3data', 'build', 'home', username)
-    else:
-        static_folder_path = os.path.join('w3data', 'build')
-
-    return send_from_directory(static_folder_path, 'index.html')
-
+# Serve the main HTML file for any route not explicitly handled by the server
+@app.route('/', defaults={'path': ''})
+@app.route('/<username>/<path:path>')
+def catch_all(username, path):
+    return render_template('index.html')
 
 CORS(app, supports_credentials=True, origins='https://we3database.onrender.com')
 
