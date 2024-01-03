@@ -18,7 +18,12 @@ from mysql.connector import Error
 from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
 
 
-app = Flask(__name__, static_folder='../w3data/build', static_url_path='')
+app = Flask(
+    __name__,
+    static_url_path='',
+    static_folder='../w3data/build',
+    template_folder='../w3data/build'
+)
 CORS(app, supports_credentials=True, origins='https://we3database.onrender.com')
 
 # MySQL connection pooling configuration
@@ -33,9 +38,9 @@ mysql_pool = pooling.MySQLConnectionPool(
      database="w3data-users",
      connect_timeout=10,
  )
-@app.route('/')
-def serve():
-    return send_from_directory(app.static_folder, 'index.html')
+@app.errorhandler(404)
+def not_found(e):
+    return render_template("index.html")
 
 
 # JWT configuration
