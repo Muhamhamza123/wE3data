@@ -16,14 +16,23 @@ from datetime import datetime, timedelta
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 from mysql.connector import Error
 from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
+from flask import Flask, send_from_directory
 
-app = Flask(__name__, static_folder='/w3data/build', static_url_path='/')
+app = Flask(__name__, static_folder='../w3data/build', static_url_path='/')
 
 @app.route('/', defaults={'path': ''})
+@app.route('/<username>/<path:path>')
 @app.route('/<path:path>')
-def catch_all(path):
-    print(f"Serving {path}")
-    return app.send_static_file('index.html')
+def catch_all(username=None, path=''):
+    print(f"Serving with username '{username}' and path '{path}'")
+    
+    # If a username is provided, adjust the static folder path accordingly
+    if username:
+        static_folder_path = f'w3data/build/{username}'
+    else:
+        static_folder_path = 'w3data/build'
+    
+    return send_from_directory(static_folder_path, 'index.html')
 CORS(app, supports_credentials=True, origins='https://we3database.onrender.com')
 
 # MySQL connection pooling configuration
