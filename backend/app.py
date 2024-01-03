@@ -17,7 +17,7 @@ from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 from mysql.connector import Error
 from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
 
-app = Flask(__name__, static_folder='../w3data/build', static_url_path='/')
+app = Flask(__name__, static_folder='/w3data/build', static_url_path='/')
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
