@@ -18,17 +18,17 @@ from mysql.connector import Error
 from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
 from flask import Flask, send_from_directory
 
-app = Flask(__name__, static_folder='../w3data/build', static_url_path='/')
+app = Flask(__name__, static_folder='w3data/build', static_url_path='/')
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<username>/<path:path>')
-@app.route('/<path:path>')
+@app.route('/')
+@app.route('/home/<username>/')
+@app.route('/home/<username>/<path:path>')
 def catch_all(username=None, path=''):
     print(f"Serving with username '{username}' and path '{path}'")
     
     # If a username is provided, adjust the static folder path accordingly
     if username:
-        static_folder_path = f'w3data/build/{username}'
+        static_folder_path = f'w3data/build/home/{username}'
     else:
         static_folder_path = 'w3data/build'
     
