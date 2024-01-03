@@ -22,19 +22,13 @@ from flask import Flask, send_from_directory
 from flask import Flask, render_template, send_from_directory
 import os
 from flask import Flask, send_from_directory
-app = Flask(
-    __name__,
-    static_url_path='',
-    static_folder='w3data/build',
-    template_folder='w3data/build'
-)
-
-# ... (other routes and configurations)
-
+app = Flask(__name__, static_folder='../w3data/build', static_url_path='/')
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
 @app.errorhandler(404)
-def not_found(e):
+def catch_all(path):
     print(f"404 Error - Path not found: {request.path}")
-    return render_template("index.html")
+    return app.send_static_file('index.html')
     
 
 
