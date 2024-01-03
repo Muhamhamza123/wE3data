@@ -17,7 +17,7 @@ from flask_jwt_extended import JWTManager, jwt_required, create_access_token
 from mysql.connector import Error
 from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
 from flask import Flask, send_from_directory
-
+from flask import Flask, render_template
 from flask import Flask, send_from_directory
 import os
 app = Flask(__name__, static_folder='w3data/build', static_url_path='')
