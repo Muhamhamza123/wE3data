@@ -22,7 +22,7 @@ from flask import Flask, send_from_directory
 from flask import Flask, render_template, send_from_directory
 import os
 from flask import Flask, send_from_directory
-app = Flask(__name__, static_folder='../w3data/build', static_url_path='/')
+app = Flask(__name__, static_folder='w3data/build', static_url_path='/')
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 @app.errorhandler(404)
