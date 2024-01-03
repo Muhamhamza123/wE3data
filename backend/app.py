@@ -25,24 +25,11 @@ from flask import Flask, send_from_directory
 from flask import Flask, send_from_directory, request
 
 app = Flask(__name__, static_folder='w3data/build', static_url_path='')
-
-# Serve the main HTML file for any route not explicitly handled by the server
-@app.route('/')
-@app.route('/<username>/<path:path>')
-def index(username=None, path=None):
-    return send_from_directory(app.static_folder, 'index.html')
-
-# Serve static files
-@app.route('/<username>/static/<path:filename>')
-def serve_static(username, filename):
-    static_path = f'static/{filename}'
-    return send_from_directory(app.static_folder, static_path)
-
 # 404 error handler
 @app.errorhandler(404)
 def page_not_found(e):
-    username = request.view_args.get('username', '')
-    print(f"404 Error - Path not found for username: {username}")
+    
+    print(f"404 Error - Path not found for username: {path}")
     return send_from_directory(app.static_folder, 'index.html')
 
 
