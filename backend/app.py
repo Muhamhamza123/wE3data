@@ -35,8 +35,7 @@ def index(username):
 def page_not_found(e):
     return send_from_directory(app.static_folder, 'index.html')
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
 
 
 CORS(app, supports_credentials=True, origins='https://we3database.onrender.com')
