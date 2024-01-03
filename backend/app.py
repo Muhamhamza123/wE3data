@@ -19,11 +19,17 @@ from influxdb.exceptions import InfluxDBClientError, InfluxDBServerError
 from flask import Flask, send_from_directory
 from flask import Flask, render_template
 from flask import Flask, send_from_directory
+from flask import Flask, render_template, send_from_directory
 import os
-app = Flask(__name__, static_folder='w3data/build', static_url_path='')
+app = Flask(__name__)
+
+# Serve static files (optional)
+@app.route('/w3data/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(os.path.join('w3data', 'build', 'static'), filename)
 
 # Serve the main HTML file for any route not explicitly handled by the server
-@app.route('/', defaults={'username': '', 'path': ''})
+@app.route('/<username>/', defaults={'path': ''})
 @app.route('/<username>/<path:path>')
 def catch_all(username, path):
     return render_template('index.html')
