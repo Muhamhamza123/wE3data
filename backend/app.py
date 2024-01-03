@@ -23,7 +23,7 @@ import os
 app = Flask(__name__, static_folder='w3data/build', static_url_path='')
 
 # Serve the main HTML file for any route not explicitly handled by the server
-@app.route('/', defaults={'path': ''})
+@app.route('/', defaults={'username': '', 'path': ''})
 @app.route('/<username>/<path:path>')
 def catch_all(username, path):
     return render_template('index.html')
